@@ -5,7 +5,7 @@ import Ajv from "ajv";
 import schema from "../shared/types.schema.json";
 
 const ajv = new Ajv();
-const isValidBodyParams = ajv.compile(schema.definitions["Movie"] || {});
+const isValidBodyParams = ajv.compile(schema.definitions["Review"] || {});
 
 const ddbDocClient = createDDbDocClient();
 
@@ -31,11 +31,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          message: `Incorrect type. Must match Movie schema`,
-          schema: schema.definitions["Movie"],
+          message: `Incorrect type. Must match Review schema`,
+          schema: schema.definitions["Review"],
         }),
       };
     }
+
+    console.log("Received body: ", body);
 
     const commandOutput = await ddbDocClient.send(
       new PutCommand({
@@ -44,14 +46,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       })
     );
 
+    console.log("PutCommand Output: ", commandOutput);
+
     return {
       statusCode: 201,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ message: "Movie added" }),
+      body: JSON.stringify({ message: "Review added" }),
     };
-    
+
   } catch (error: any) {
     console.log(JSON.stringify(error));
     return {
@@ -73,7 +77,11 @@ function createDDbDocClient() {
   };
   const unmarshallOptions = {
     wrapNumbers: false,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: true,
   };
-  const translateConfig = { marshallOptions, unmarshallOptions };
-  return DynamoDBDocumentClient.from(ddbClient, translateConfig);
+  return DynamoDBDocumentClient.from(ddbClient, {
+    marshallOptions,
+    unmarshallOptions,
+  });
 }

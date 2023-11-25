@@ -22,4 +22,12 @@ export type Movie = {
     movieId: string;
     actorName?: string;
     roleName?: string
-  }
+  };
+  // Review
+  export type Review = {
+    movieId: number;
+    reviewName: string;
+    reviewDate: string;
+    reviewText: string;
+    reviewRating: number;
+  };

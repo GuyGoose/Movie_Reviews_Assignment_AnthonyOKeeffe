@@ -1,57 +1,48 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import Ajv from "ajv";
-import schema from "../shared/types.schema.json";
+import { DynamoDBDocumentClient, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 
-const ajv = new Ajv();
-const isValidBodyParams = ajv.compile(schema.definitions["Movie"] || {});
-
-const ddbDocClient = createDDbDocClient();
+const ddbDocClient = createDynamoDBDocumentClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
-    // Print Event
     console.log("Event: ", event);
-    const body = event.body ? JSON.parse(event.body) : undefined;
-    if (!body) {
+
+    const parameters = event?.pathParameters;
+    const movieId = parameters?.movieId ? parseInt(parameters.movieId) : undefined;
+
+    if (!movieId) {
       return {
-        statusCode: 500,
+        statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing request body" }),
+        body: JSON.stringify({ Message: "Missing movie Id" }),
       };
     }
 
-    if (!isValidBodyParams(body)) {
-      return {
-        statusCode: 500,
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Incorrect type. Must match Movie schema`,
-          schema: schema.definitions["Movie"],
-        }),
-      };
-    }
+    const commandInput: QueryCommandInput = {
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "movieId = :m",
+      ExpressionAttributeValues: {
+        ":m": movieId,
+      },
+    };
 
     const commandOutput = await ddbDocClient.send(
-      new PutCommand({
-        TableName: process.env.TABLE_NAME,
-        Item: body,
-      })
-    );
+        new QueryCommand(
+            commandInput));
 
     return {
-      statusCode: 201,
+      statusCode: 200,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ message: "Movie added" }),
+      body: JSON.stringify({
+        data: commandOutput.Items,
+      }),
     };
-    
+
   } catch (error: any) {
     console.log(JSON.stringify(error));
     return {
@@ -64,7 +55,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   }
 };
 
-function createDDbDocClient() {
+function createDynamoDBDocumentClient() {
   const ddbClient = new DynamoDBClient({ region: process.env.REGION });
   const marshallOptions = {
     convertEmptyValues: true,
