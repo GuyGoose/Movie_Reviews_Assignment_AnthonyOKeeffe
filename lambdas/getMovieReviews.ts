@@ -1,6 +1,11 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand, QueryCommandInput } from "@aws-sdk/lib-dynamodb";
+import Ajv from "ajv";
+import schema from "../shared/types.schema.json";
+
+const ajv = new Ajv();
+const isValidQueryParams = ajv.compile(schema.definitions["reviewQueryParams"] || {});
 
 const ddbDocClient = createDynamoDBDocumentClient();
 
@@ -10,6 +15,29 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     const parameters = event?.pathParameters;
     const movieId = parameters?.movieId ? parseInt(parameters.movieId) : undefined;
+
+    const queryParams = event.queryStringParameters;
+    if (!queryParams) {
+      return {
+        statusCode: 500,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ message: "Missing query parameters" }),
+      };
+    }
+    if (!isValidQueryParams(queryParams)) {
+      return {
+        statusCode: 500,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Incorrect type. Must match Query parameters schema`,
+          schema: schema.definitions["reviewQueryParams"],
+        }),
+      };
+    }
 
     if (!movieId) {
       return {
@@ -21,7 +49,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       };
     }
 
-    const commandInput: QueryCommandInput = {
+    let commandInput: QueryCommandInput = {
       TableName: process.env.TABLE_NAME,
       KeyConditionExpression: "movieId = :m",
       ExpressionAttributeValues: {
@@ -29,9 +57,30 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       },
     };
 
-    const commandOutput = await ddbDocClient.send(
-        new QueryCommand(
-            commandInput));
+    // Add a Filter Expression for reviewRating
+    if ("reviewRating" in queryParams) {
+        const reviewRating = queryParams.reviewRating || "0";
+        commandInput = {
+            ...commandInput,
+            FilterExpression: "reviewRating = :r",
+            ExpressionAttributeValues: {
+                ...commandInput.ExpressionAttributeValues,
+                ":r": parseInt(reviewRating),
+            },
+        };
+    } else if ("minReviewRating" in queryParams) {
+        const minReviewRating = queryParams.minReviewRating || "0";
+      commandInput = {
+        ...commandInput,
+        FilterExpression: "reviewRating >= :r",
+        ExpressionAttributeValues: {
+          ...commandInput.ExpressionAttributeValues,
+            ":r": parseInt(minReviewRating),
+        },
+      };
+    }
+
+    const commandOutput = await ddbDocClient.send(new QueryCommand(commandInput));
 
     return {
       statusCode: 200,
@@ -42,7 +91,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         data: commandOutput.Items,
       }),
     };
-
   } catch (error: any) {
     console.log(JSON.stringify(error));
     return {

@@ -31,3 +31,11 @@ export type Movie = {
     reviewText: string;
     reviewRating: number;
   };
+  // Used to validate the query string og HTTP Get requests
+  export type ReviewQueryParams = {
+    movieId: string;
+    reviewName?: string;
+    reviewDate?: string;
+    reviewRating?: number;
+    minReviewRating?: number;
+  };

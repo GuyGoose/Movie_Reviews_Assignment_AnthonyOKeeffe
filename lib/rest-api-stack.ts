@@ -44,6 +44,28 @@ export class RestAPIStack extends cdk.Stack {
       tableName: "MovieReviews",
     });
 
+    // Global Secondary Indexes for Movie Reviews
+    // Query by review name
+    movieReviewsTable.addGlobalSecondaryIndex({
+      indexName: "reviewIx",
+      partitionKey: { name: "reviewName", type: dynamodb.AttributeType.STRING },
+    });
+    // Query by rating
+    movieReviewsTable.addGlobalSecondaryIndex({
+      indexName: "ratingIx",
+      partitionKey: { name: "reviewRating", type: dynamodb.AttributeType.NUMBER },
+    });
+    // Query by review date
+    movieReviewsTable.addGlobalSecondaryIndex({
+      indexName: "reviewDateIx",
+      partitionKey: { name: "reviewDate", type: dynamodb.AttributeType.STRING },
+    });
+    // Query by min rating
+    movieReviewsTable.addGlobalSecondaryIndex({
+      indexName: "minRatingIx",
+      partitionKey: { name: "reviewRating", type: dynamodb.AttributeType.NUMBER },
+      sortKey: { name: "reviewName", type: dynamodb.AttributeType.STRING },
+    });
     
     // Functions 
     const getMovieByIdFn = new lambdanode.NodejsFunction(
