@@ -83,6 +83,23 @@ export class RestAPIStack extends cdk.Stack {
         },
       }
       );
+
+      // get Review by Reviewer Name (reviewName) case sensitive and if contains
+      const getMovieReviewsByNameFn = new lambdanode.NodejsFunction(
+        this,
+        "GetMovieReviewsByNameFn",
+        {
+          architecture: lambda.Architecture.ARM_64,
+          runtime: lambda.Runtime.NODEJS_16_X,
+          entry: `${__dirname}/../lambdas/getMovieReviewsByName.ts`,
+          timeout: cdk.Duration.seconds(10),
+          memorySize: 128,
+          environment: {
+            TABLE_NAME: movieReviewsTable.tableName,
+            REGION: 'eu-west-1',
+          },
+        }
+        );
       
       const getAllMoviesFn = new lambdanode.NodejsFunction(
         this,
@@ -195,6 +212,7 @@ export class RestAPIStack extends cdk.Stack {
         movieCastsTable.grantReadWriteData(getMovieByIdFn);
         movieReviewsTable.grantReadData(getMovieReviewsFn);
         movieReviewsTable.grantReadWriteData(addReviewFn);
+        movieReviewsTable.grantReadData(getMovieReviewsByNameFn);
 
         
             // REST API 
@@ -247,6 +265,13 @@ export class RestAPIStack extends cdk.Stack {
     movieEndpoint.addMethod(
       "DELETE",
       new apig.LambdaIntegration(deleteMovieFn, { proxy: true })
+    );
+
+    // Get movie reviews by reviewer name (/movies/{movieId}/reviews/{reviewerName})
+    const movieReviewsByNameEndpoint = movieReviewsEndpoint.addResource("{reviewerName}");
+    movieReviewsByNameEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getMovieReviewsByNameFn, { proxy: true })
     );
         
       }
