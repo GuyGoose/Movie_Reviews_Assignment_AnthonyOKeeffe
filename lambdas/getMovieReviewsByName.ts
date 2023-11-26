@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand,QueryCommand,QueryCommandInput } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand,ScanCommand,ScanCommandInput } from "@aws-sdk/lib-dynamodb";
 
 const ddbDocClient = createDDbDocClient();
 
@@ -11,7 +11,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => { // 
     console.log("Event: ", event);
     const parameters  = event?.pathParameters;
     const movieId = parameters?.movieId ? parseInt(parameters.movieId) : undefined;
-    const reviewName = parameters?.reviewName ? parameters.reviewName : undefined;
+    const reviewerName = parameters?.reviewerName ? parameters.reviewerName : undefined;
     
     if (!movieId) {
       return {
@@ -23,7 +23,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => { // 
       };
     }
 
-    if (!reviewName) {
+    if (!reviewerName) {
       return {
         statusCode: 404,
         headers: {
@@ -33,14 +33,18 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => { // 
       };
     }
 
-    const commandOutput = await ddbDocClient.send(
-      new GetCommand({
+    const commandInput: ScanCommandInput = {
         TableName: process.env.TABLE_NAME,
-        Key: { movieId: movieId },
-      })
-    );
+        FilterExpression: "movieId = :m and reviewerName = :r",
+        ExpressionAttributeValues: {
+            ":m": movieId,
+            ":r": reviewerName,
+        }
+    };
+
+    const commandOutput = await ddbDocClient.send(new ScanCommand(commandInput));
     console.log("GetCommand response: ", commandOutput);
-    if (!commandOutput.Item) {
+    if (!commandOutput.Items) {
       return {
         statusCode: 404,
         headers: {
@@ -48,15 +52,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => { // 
         },
         body: JSON.stringify({ Message: "Invalid movie Id" }),
       };
-
-      
     }
 
     let body = {
-      data: commandOutput.Item
+      data: commandOutput.Items
     };
 
-    if (!commandOutput.Item) {
+    if (!commandOutput.Items) {
       return {
         statusCode: 404,
         headers: {
@@ -71,7 +73,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => { // 
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({body}),
     };
     } catch (error: any) {
       console.log(JSON.stringify(error));

@@ -39,7 +39,7 @@ export class RestAPIStack extends cdk.Stack {
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewsTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
-      sortKey: { name: "reviewName", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "reviewerName", type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieReviews",
     });
@@ -48,7 +48,7 @@ export class RestAPIStack extends cdk.Stack {
     // Query by review name
     movieReviewsTable.addGlobalSecondaryIndex({
       indexName: "reviewIx",
-      partitionKey: { name: "reviewName", type: dynamodb.AttributeType.STRING },
+      partitionKey: { name: "reviewerName", type: dynamodb.AttributeType.STRING },
     });
     // Query by rating
     movieReviewsTable.addGlobalSecondaryIndex({
@@ -64,7 +64,7 @@ export class RestAPIStack extends cdk.Stack {
     movieReviewsTable.addGlobalSecondaryIndex({
       indexName: "minRatingIx",
       partitionKey: { name: "reviewRating", type: dynamodb.AttributeType.NUMBER },
-      sortKey: { name: "reviewName", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "reviewerName", type: dynamodb.AttributeType.STRING },
     });
     
     // Functions 
@@ -84,7 +84,7 @@ export class RestAPIStack extends cdk.Stack {
       }
       );
 
-      // get Review by Reviewer Name (reviewName) case sensitive and if contains
+      // get Review by Reviewer Name (reviewerName) case sensitive and if contains
       const getMovieReviewsByNameFn = new lambdanode.NodejsFunction(
         this,
         "GetMovieReviewsByNameFn",
@@ -100,6 +100,23 @@ export class RestAPIStack extends cdk.Stack {
           },
         }
         );
+
+      // Get all Reviews by reviewerName
+      const getAllMovieReviewsByNameFn = new lambdanode.NodejsFunction(
+        this,
+        "GetAllMovieReviewsByNameFn",
+        {
+          architecture: lambda.Architecture.ARM_64,
+          runtime: lambda.Runtime.NODEJS_16_X,
+          entry: `${__dirname}/../lambdas/getAllMovieReviewsByName.ts`,
+          timeout: cdk.Duration.seconds(10),
+          memorySize: 128,
+          environment: {
+            TABLE_NAME: movieReviewsTable.tableName,
+            REGION: "eu-west-1",
+          },
+        }
+      );
       
       const getAllMoviesFn = new lambdanode.NodejsFunction(
         this,
@@ -213,6 +230,7 @@ export class RestAPIStack extends cdk.Stack {
         movieReviewsTable.grantReadData(getMovieReviewsFn);
         movieReviewsTable.grantReadWriteData(addReviewFn);
         movieReviewsTable.grantReadData(getMovieReviewsByNameFn);
+        movieReviewsTable.grantReadData(getAllMovieReviewsByNameFn);
 
         
             // REST API 
@@ -272,6 +290,12 @@ export class RestAPIStack extends cdk.Stack {
     movieReviewsByNameEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMovieReviewsByNameFn, { proxy: true })
+    );
+
+    const allMovieReviewsByNameEndpoint = movieReviewsPostEndpoint.addResource("{reviewerName}");
+    allMovieReviewsByNameEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getAllMovieReviewsByNameFn, { proxy: true })
     );
         
       }

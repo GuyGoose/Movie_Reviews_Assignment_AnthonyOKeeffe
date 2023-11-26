@@ -26,7 +26,7 @@ export type Movie = {
   // Review
   export type Review = {
     movieId: number;
-    reviewName: string;
+    reviewerName: string;
     reviewDate: string;
     reviewText: string;
     reviewRating: number;
@@ -34,7 +34,7 @@ export type Movie = {
   // Used to validate the query string og HTTP Get requests
   export type ReviewQueryParams = {
     movieId: string;
-    reviewName?: string;
+    reviewerName?: string;
     reviewDate?: string;
     reviewRating?: number;
     minReviewRating?: number;
