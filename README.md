@@ -11,6 +11,7 @@ This repository contains the implementation of a serverless REST API for the AWS
 + GET /movies/{movieId}/reviews?minRating=n - Get all the reviews for the movie with the specified ID with a rating greater than the minRating.
 + GET /movies/{movieId}/reviews?reviewRating=n - Get all the reviews for the movie with the specified ID of n.
 + GET /movies/{movieId}/reviews/{reviewerName} - Get the review for the movie with the specified movie ID and written by the named reviewer.
++ GET /movies/reviews/{reviewerName} - Get all the reviews written by a specific reviewer.
 + PUT /movies/{movieId}/reviews/{reviewerName} - Update the text of a review.
 
 ![](./images/api1.png)

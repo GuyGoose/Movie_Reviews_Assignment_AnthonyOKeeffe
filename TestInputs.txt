@@ -1,0 +1,29 @@
+Post a new review
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/reviews
+
+{
+  "movieId":4567,
+  "reviewerName":"Joe Cloggs",
+  "reviewDate":"2020-11-22",
+  "reviewRating":5,
+  "reviewText":"This is a another review"
+}
+
+Get Reviews of specific Movie
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/1234/reviews
+
+Get Rating of min value
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/1234/reviews?minReviewRating=5
+
+Get Specific Rating
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/1234/reviews?reviewRating=1
+
+Get by Reviewer Name
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/1234/reviews/JoeBloggs
+
+Put using Reviewer Name
+https://w0a28yn72c.execute-api.eu-west-1.amazonaws.com/dev/movies/1234/reviews/JoeBloggs
+
+{
+  "updatedText": "This is the updated review text."
+}
