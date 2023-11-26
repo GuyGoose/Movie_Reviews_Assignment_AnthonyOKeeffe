@@ -18,12 +18,24 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     const queryParams = event.queryStringParameters;
     if (!queryParams) {
+      let commandInput: QueryCommandInput = {
+        TableName: process.env.TABLE_NAME,
+        KeyConditionExpression: "movieId = :m",
+        ExpressionAttributeValues: {
+          ":m": movieId,
+        },
+      };
+    
+      const commandOutput = await ddbDocClient.send(new QueryCommand(commandInput));
+    
       return {
-        statusCode: 500,
+        statusCode: 200,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing query parameters" }),
+        body: JSON.stringify({
+          data: commandOutput.Items,
+        }),
       };
     }
     if (!isValidQueryParams(queryParams)) {
